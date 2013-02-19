@@ -18,6 +18,7 @@ const PopupBaseMenuItem = imports.ui.popupMenu.PopupBaseMenuItem;
 const Switch = imports.ui.popupMenu.Switch;
 const Clutter = imports.gi.Clutter;
 const Lightbox = imports.ui.lightbox;
+const AppletSettings = imports.ui.appletSettings
 
 const Util = imports.misc.util;
 const GLib = imports.gi.GLib;
@@ -25,16 +26,6 @@ const Gio = imports.gi.Gio;
 const Lang = imports.lang;
 const St = imports.gi.St;
 const Gtk = imports.gi.Gtk;
-
-let uuid = 'capture@rjanja';
-
-const Capture = imports.ui.appletManager.applets[uuid];
-const Screenshot = Capture.screenshot;
-const AppletDir = imports.ui.appletManager.appletMeta[uuid].path;
-const SUPPORT_FILE = AppletDir + '/support.json';
-const SETTINGS_FILE = AppletDir + '/settings.json';
-const ICON_FILE = AppletDir + '/retro-icon-mint.png';
-const CLIPBOARD_HELPER = AppletDir + '/clip.py';
 
 const CAMERA_PROGRAM_GNOME = 'gnome-screenshot';
 const KEY_GNOME_SCREENSHOT_SCHEMA = "org.gnome.gnome-screenshot"
@@ -47,6 +38,15 @@ const KEY_RECORDER_FILE_EXTENSION = "file-extension";
 const KEY_RECORDER_PIPELINE = "pipeline";
 
 const IMGUR_CRED = "85a61980ca1cc59f329ee172245ace84";
+
+// Globals we'll set once we have metadata in main()
+let Capture;
+let Screenshot;
+let AppletDir;
+let SUPPORT_FILE;
+let SETTINGS_FILE;
+let ICON_FILE;
+let CLIPBOARD_HELPER;
 
 function StubbornSwitchMenuItem() {
     this._init.apply(this, arguments);
@@ -247,8 +247,8 @@ function getSettings(schema) {
    }
 }
 
-function MyApplet(orientation) {
-   this._init(orientation);
+function MyApplet(metadata, orientation, panelHeight, instanceId) {
+   this._init(metadata, orientation, panelHeight, instanceId);
 }
 
 MyApplet.prototype = {
@@ -377,7 +377,7 @@ MyApplet.prototype = {
         return false;
     },
 
-   _init: function(orientation) {
+   _init: function(metadata, orientation, panelHeight, instanceId) {
       Applet.IconApplet.prototype._init.call(this, orientation);
       
       try {
@@ -396,6 +396,7 @@ MyApplet.prototype = {
          this.lastCapture = null;
 
          // Load up our settings
+         this.settings = new AppletSettings.AppletSettings(this, metadata.uuid, instanceId);
          this._settingsFile = Gio.file_new_for_path(SETTINGS_FILE);
          this._monitor = this._settingsFile.monitor(Gio.FileMonitorFlags.NONE, null);
          this._monitor.connect('changed', Lang.bind(this, this._jSettingsChanged));
@@ -424,8 +425,6 @@ MyApplet.prototype = {
          let xfixesCursor = Cinnamon.XFixesCursor.get_for_stage(global.stage);
          this._xfixesCursor = xfixesCursor;
 
-         
-         
          this.set_applet_tooltip(_("Screenshot and desktop video"));
 
          this.draw_menu(orientation);
@@ -803,12 +802,17 @@ MyApplet.prototype = {
 
    _toggle_cinnamon_recorder: function(actor, event) {
        if (this.cRecorder.is_recording()) {
-          this.cRecorder.pause();
+          this.cRecorder.close();
           Meta.enable_unredirect_for_screen(global.screen);
        }
        else {
           this.cRecorder.set_framerate(this._crFrameRate);
-          this.cRecorder.set_filename('cinnamon-%d%u-%c.' + this._crFileExtension);
+          if (this.cRecorder['set_filename']) {
+            this.cRecorder.set_filename('cinnamon-%d%u-%c.' + this._crFileExtension);
+          }
+          else if (this.cRecorder['set_file_template']) {
+            this.cRecorder.set_file_template('cinnamon-%d%t.' + this._crFileExtension);
+          }
 
           let pipeline = this._crPipeline;
           global.log("Pipeline is " + pipeline);
@@ -1070,9 +1074,17 @@ MyApplet.prototype = {
    },
 };
 
-function main(metadata, orientation) {
-    let myApplet = new MyApplet(orientation);
-    return myApplet;
+function main(metadata, orientation, panelHeight, instanceId) {
+   Capture = imports.ui.appletManager.applets[metadata.uuid];
+   Screenshot = Capture.screenshot;
+   AppletDir = imports.ui.appletManager.appletMeta[metadata.uuid].path;
+   SUPPORT_FILE = AppletDir + '/support.json';
+   SETTINGS_FILE = AppletDir + '/settings.json';
+   ICON_FILE = AppletDir + '/retro-icon-mint.png';
+   CLIPBOARD_HELPER = AppletDir + '/clip.py';
+
+   let myApplet = new MyApplet(metadata, orientation, panelHeight, instanceId);
+   return myApplet;
 }
 
 function str_replace (search, replace, subject, count) {
