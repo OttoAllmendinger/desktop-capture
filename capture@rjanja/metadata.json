@@ -5,6 +5,6 @@
    "icon": "applets-screenshooter",
    "homepage": "https://github.com/rjanja/desktop-capture",
    "version": "1.0",
-   "external-configuration-app": "settings.py",
+   
    "hide-configuration": false
 }
