@@ -274,7 +274,7 @@ LocalSettings.prototype = {
                if (this._settings[k] !== this._oldSettings[k])
                {
                   global.log('emitting changed::'+k);
-                  this.emit("changed::"+k, this._oldSettings[k], this._settings[k]);
+                  this.emit("changed::"+k, k, this._oldSettings[k], this._settings[k]);
                }
             }
          }
@@ -428,7 +428,7 @@ MyApplet.prototype = {
       return false;
    },
 
-   _onRuntimeChanged: function(settingsObj, oldVal, newVal) {
+   _onRuntimeChanged: function(settingsObj, key, oldVal, newVal) {
       this.log('runtimeChanged: ' + oldVal + ', ' + newVal);
       this.draw_menu();
    },
@@ -1182,7 +1182,6 @@ function main(metadata, orientation, panelHeight, instanceId) {
    Screenshot = Capture.screenshot;
    AppletDir = imports.ui.appletManager.appletMeta[metadata.uuid].path;
    SUPPORT_FILE = AppletDir + '/support.json';
-   
    ICON_FILE = AppletDir + '/retro-icon-mint.png';
    CLIPBOARD_HELPER = AppletDir + '/clip.py';
 
