@@ -424,7 +424,7 @@ MyApplet.prototype = {
       return false;
    },
 
-   _onRuntimeChanged: function(oldVal, newVal) {
+   _onRuntimeChanged: function(settingsObj, oldVal, newVal) {
       this.log('runtimeChanged: ' + oldVal + ', ' + newVal);
       if (oldVal != newVal) {
          this.draw_menu();
