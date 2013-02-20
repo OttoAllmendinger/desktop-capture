@@ -254,6 +254,7 @@ function LocalSettings(uuid, instanceId) {
 LocalSettings.prototype = {
    _init: function(uuid, instanceId) {
       this._initialized = false;
+      this._localSettings = false;
       this._filename = SETTINGS_FILE = AppletDir + '/settings.json';;
       this._settingsFile = Gio.file_new_for_path(this._filename);
       this._settings = this._oldSettings = {};
@@ -310,6 +311,7 @@ MyApplet.prototype = {
    __proto__: Applet.IconApplet.prototype,
 
    log: function(msg) {
+      return;
       if (typeof msg == 'object') {
          global.log(msg);
       }
@@ -324,10 +326,12 @@ MyApplet.prototype = {
          //xyz();
          this.settings = new Settings.AppletSettings(this, this._uuid, this._instanceId);
          this.log('Using AppletSettings');
+         this._localSettings = false;
       }
       catch (e) {
          this.log('Falling back to LocalSettings');
          this.settings = new LocalSettings(this._uuid, this._instanceId);
+         this._localSettings = true;
       }
       
       this.settings.connect("settings-changed", Lang.bind(this, this._onSettingsChanged));
@@ -426,9 +430,7 @@ MyApplet.prototype = {
 
    _onRuntimeChanged: function(settingsObj, oldVal, newVal) {
       this.log('runtimeChanged: ' + oldVal + ', ' + newVal);
-      if (oldVal != newVal) {
-         this.draw_menu();
-      }
+      this.draw_menu();
    },
 
    _settingsChanged: function(key) {
@@ -923,7 +925,12 @@ MyApplet.prototype = {
    },
 
    _launch_settings: function() {
-      Main.Util.spawnCommandLine(AppletDir + "/settings.py");
+      if (this._localSettings) {
+         Main.Util.spawnCommandLine(AppletDir + "/settings.py");
+      }
+      else {
+         Main.Util.spawnCommandLine('cinnamon-settings applets '+this._uuid);
+      }
    },
 
    get_camera_program: function() {
